@@ -1,10 +1,9 @@
 from pathlib import Path
-
-from .config import get_allow_pickle_read, PINS_ENV_INSECURE_READ
-from .meta import Meta
-from .errors import PinsInsecureReadError
-
 from typing import Sequence
+
+from .config import PINS_ENV_INSECURE_READ, get_allow_pickle_read
+from .errors import PinsInsecureReadError
+from .meta import Meta
 
 # TODO: move IFileSystem out of boards, to fix circular import
 # from .boards import IFileSystem
@@ -22,6 +21,12 @@ def _assert_is_pandas_df(x):
             "Currently only pandas.DataFrame can be saved to a CSV."
         )
 
+def _assert_is_geopandas_df(x):
+    import geopandas as gpd
+    if not isinstance(x, gpd.GeoDataFrame):
+        raise NotImplementedError(
+            "Currently only geopandas.GeoDataFrame can be saved to a GeoParquet."
+        )
 
 def load_path(meta, path_to_version):
     # Check that only a single file name was given
@@ -100,6 +105,11 @@ def load_data(
 
             return pd.read_parquet(f)
 
+        elif meta.type == "geoparquet":
+            import geopandas as gpd
+
+            return gpd.read_parquet(f)
+
         elif meta.type == "table":
             import pandas as pd
 
@@ -165,6 +175,11 @@ def save_data(
 
     elif type == "parquet":
         _assert_is_pandas_df(obj)
+
+        obj.to_parquet(final_name)
+
+    elif type == "geoparquet":
+        _assert_is_geopandas_df(obj)
 
         obj.to_parquet(final_name)
 
